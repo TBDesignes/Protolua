@@ -1,5 +1,6 @@
 local protolua = { }
 
+local metaClass = { }
 local metaStatic = { }
 
 function protolua.withName(class, name)
@@ -17,14 +18,25 @@ function protolua.withConstructor(class, constructor)
   return class
 end
 
+function protolua.mixin(class, mixin)
+  local count = 0
+  for i = 1, #class.mixins do
+    if class.mixins[i] == mixin then
+      return class
+    end
+    count = i
+  end
+  class.mixins[count + 1] = mixin
+  return class
+end
 
 function protolua.new(class, args)
-  local instance = nil
+  local instance = class.base and class.base:new(args) or { }
   
-  if class.base then
-    instance = class.base:new(args)
-  else
-    instance = { }
+  for _, mixin in pairs(class.mixins) do
+    for k, v in pairs(mixin.proto) do
+      instance[k] = v
+    end
   end
   
   for k, v in pairs(class.proto) do
@@ -45,12 +57,15 @@ function protolua.class()
   
   class.proto = { class = class }
   class.static = { class = class }
+  class.mixins = { }
   
   class.new = protolua.new
   class.withName = protolua.withName
   class.extend = protolua.extend
   class.withConstructor = protolua.withConstructor
+  class.mixin = protolua.mixin
   
+  setmetatable(class, metaClass)
   setmetatable(class.static, metaStatic)
   
   return class
@@ -73,9 +88,11 @@ end
 
 function metaStatic.__index(table, key)
   local base = table.class.base
-  if base then
-    return base.static[key]
-  end
+  return base and base.static[key]
+end
+
+function metaClass.__call(func, ...)
+  return func.proto
 end
 
 return protolua
