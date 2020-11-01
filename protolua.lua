@@ -19,6 +19,9 @@ function protolua.withConstructor(class, constructor)
 end
 
 function protolua.mixin(class, mixin)
+  if type(mixin) == "string" then
+    mixin = require(mixin)
+  end
   local count = 0
   for i = 1, #class.mixins do
     if class.mixins[i] == mixin then
